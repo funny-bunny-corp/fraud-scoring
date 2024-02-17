@@ -6,7 +6,7 @@ import (
 )
 
 type TransactionRiskScoreInput struct {
-	Average history.AveragePayment
-	Last    history.LastOrder
-	Order   domain.PaymentOrder
+	Average *history.AveragePayment
+	Last    *history.LastOrder
+	Order   *domain.PaymentOrder
 }

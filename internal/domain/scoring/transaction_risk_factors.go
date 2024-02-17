@@ -30,3 +30,11 @@ func (trf TransactionRiskFactors) WithCurrencyScore(crse CurrencyRiskScoreEvalua
 func (trf TransactionRiskFactors) WithSellerScore(srse SellerRiskScoreEvaluation) {
 	trf.SellerScore = srse
 }
+
+func (trf TransactionRiskFactors) WithValueScore(vrse ValueRiskScoreEvaluation) {
+	trf.ValueScore = vrse
+}
+
+func (trf TransactionRiskFactors) WithAverageValueScore(avrse AverageValueRiskScoreEvaluation) {
+	trf.AverageValue = avrse
+}

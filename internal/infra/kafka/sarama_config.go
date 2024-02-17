@@ -1,4 +1,4 @@
-package infra_kafka
+package kafka
 
 import "os"
 
