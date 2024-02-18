@@ -10,13 +10,13 @@ type UserTransactionsConfig struct {
 	Host string
 }
 
-func NewUserTransactionGrpc(config *UserTransactionsConfig) *UserTransactionsServiceClient {
+func NewUserTransactionGrpc(config *UserTransactionsConfig) UserTransactionsServiceClient {
 	conn, err := grpc.Dial(config.Host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 
 	}
 	client := NewUserTransactionsServiceClient(conn)
-	return &client
+	return client
 }
 
 func NewUserTransactionsConfig() *UserTransactionsConfig {

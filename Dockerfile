@@ -1,5 +1,5 @@
 ##Builder Image
-FROM golang:1.18.3-alpine as builder
+FROM golang:1.22.0-alpine3.19 as builder
 ENV GO111MODULE=on
 RUN apk update \
     && apk add --no-cache ca-certificates tzdata \

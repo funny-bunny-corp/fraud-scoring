@@ -13,6 +13,7 @@ import (
 	"fraud-scoring/internal/domain/application"
 	"fraud-scoring/internal/infra/grpc"
 	"fraud-scoring/internal/infra/kafka"
+	"fraud-scoring/internal/infra/logger"
 )
 
 // Injectors from wire.go:
@@ -26,9 +27,10 @@ func buildAppContainer() (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	kafkaTransactionScoreCard := out2.NewKafkaTransactionScoreCard(cloudEventsSender)
-	paymentRiskScoring := application.NewPaymentRiskScoring(grpcUserTransactionsRepository, kafkaTransactionScoreCard)
-	checkoutEventReceiver := in.NewCheckoutEventReceiver(paymentRiskScoring)
+	zapLogger := logger.NewLogger()
+	kafkaTransactionScoreCard := out2.NewKafkaTransactionScoreCard(cloudEventsSender, zapLogger)
+	paymentRiskScoring := application.NewPaymentRiskScoring(grpcUserTransactionsRepository, kafkaTransactionScoreCard, zapLogger)
+	checkoutEventReceiver := in.NewCheckoutEventReceiver(paymentRiskScoring, zapLogger)
 	cloudEventsReceiver, err := kafka.NewCloudEventsKafkaConsumer(saramaConfig)
 	if err != nil {
 		return nil, err

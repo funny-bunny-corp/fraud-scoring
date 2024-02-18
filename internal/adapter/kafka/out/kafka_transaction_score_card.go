@@ -8,7 +8,7 @@ import (
 	"github.com/cloudevents/sdk-go/protocol/kafka_sarama/v2"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/uuid"
-	"log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -19,6 +19,7 @@ const (
 
 type KafkaTransactionScoreCard struct {
 	cli kafka.CloudEventsSender
+	log *zap.Logger
 }
 
 func (ktsc *KafkaTransactionScoreCard) Store(card *domain.TransactionScoreCard) error {
@@ -32,13 +33,13 @@ func (ktsc *KafkaTransactionScoreCard) Store(card *domain.TransactionScoreCard) 
 		kafka_sarama.WithMessageKey(context.Background(), sarama.StringEncoder(e.ID())),
 		e,
 	); cloudevents.IsUndelivered(result) {
-		log.Printf("failed to send: %v", result)
+		ktsc.log.Error("failed to send", zap.String("error", result.Error()))
 	} else {
-		log.Printf("sent: %s, accepted: %t", e.ID(), cloudevents.IsACK(result))
+		ktsc.log.Info("message sent", zap.String("id", e.ID()), zap.Bool("ack", cloudevents.IsACK(result)))
 	}
 	return nil
 }
 
-func NewKafkaTransactionScoreCard(cli kafka.CloudEventsSender) *KafkaTransactionScoreCard {
-	return &KafkaTransactionScoreCard{cli: cli}
+func NewKafkaTransactionScoreCard(cli kafka.CloudEventsSender, log *zap.Logger) *KafkaTransactionScoreCard {
+	return &KafkaTransactionScoreCard{cli: cli, log: log}
 }

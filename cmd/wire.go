@@ -11,6 +11,7 @@ import (
 	"fraud-scoring/internal/domain/repositories"
 	api "fraud-scoring/internal/infra/grpc"
 	ik "fraud-scoring/internal/infra/kafka"
+	"fraud-scoring/internal/infra/logger"
 	"github.com/google/wire"
 )
 
@@ -21,6 +22,7 @@ func buildAppContainer() (*Manager, error) {
 		ik.NewCloudEventsKafkaSender,
 		ik.NewCloudEventsKafkaConsumer,
 		out.NewKafkaTransactionScoreCard,
+		logger.NewLogger,
 		out2.NewGrpcUserTransactionsRepository,
 		wire.Bind(new(repositories.TransactionScoreCard), new(*out.KafkaTransactionScoreCard)),
 		wire.Bind(new(repositories.UserTransactionsRepository), new(*out2.GrpcUserTransactionsRepository)),
