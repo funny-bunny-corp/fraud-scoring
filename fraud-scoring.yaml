@@ -1,0 +1,45 @@
+asyncapi: '2.6.0'
+info:
+  title: Fraud Detection API
+  version: '1.0.0'
+  description: |
+    This API is responsible for handling real-time fraud detection events within our financial system. Specifically, it provides operations for subscribing to transaction scores which are used to evaluate the potential risk associated with a transaction.
+
+defaultContentType: application/cloudevents+json; charset=UTF-8
+
+servers:
+  production:
+    url: kafka.company.org:9092
+    protocol: kafka
+    description: Kafka server for production used to handle event messaging for the fraud detection system.
+
+channels:
+  fraud-detection.transaction-scorecard:
+    description: This channel is dedicated to receiving messages containing transaction scorecard data, which are crucial for our fraud detection processes.
+    subscribe:
+      summary: Subscribe to Transaction ScoreCard Events
+      description: |
+        Allows the subscriber to receive real-time scorecard data related to financial transactions. This data includes scores from different perspectives, like value, seller reliability, average value, and currency stability, which collectively aid in the process of fraud detection.
+      operationId: receiveTransactionScoreCard
+      message:
+        $ref: '#/components/messages/ceTransactionScoreCardCreated'
+
+components:
+
+  messages:
+    ceTransactionScoreCardCreated:
+      name: TransactionScoreCardEvent
+      title: Transaction ScoreCard Event Message
+      summary: Event message containing a Transaction ScoreCard.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/transactionScoreCard'
+
+  schemas:
+    transactionScoreCard:
+      type: object
+      allOf:
+        - $ref: 'https://raw.githubusercontent.com/cloudevents/spec/v1.0.1/spec.json'
+      properties:
+        data:
+          $ref: 'https://raw.githubusercontent.com/paymentic/schemas/main/fraud-detection/payments-gateway.v1.transaction-scorecard-created.json'
