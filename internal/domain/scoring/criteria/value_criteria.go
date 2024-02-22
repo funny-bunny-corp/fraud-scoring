@@ -7,7 +7,7 @@ type ValueCriteria struct {
 }
 
 func (v *ValueCriteria) Execute(input scoring.TransactionRiskScoreInput, factors *scoring.TransactionRiskFactors) {
-	if input.Order.Amount == input.Last.Amount {
+	if input.Transaction.Payment.Amount == input.Last.Amount {
 		factors.WithValueScore(scoring.ValueRiskScoreEvaluation{Scoring: -3})
 	} else {
 		factors.WithValueScore(scoring.ValueRiskScoreEvaluation{Scoring: 0})

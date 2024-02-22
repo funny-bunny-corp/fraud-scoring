@@ -12,8 +12,9 @@ type CheckoutData struct {
 			Token    string `json:"token"`
 		} `json:"cardInfo"`
 		IdempotencyKey string `json:"idempotencyKey"`
+		At             string `json:"at"`
 	} `json:"checkout"`
-	Payments []struct {
+	Payment struct {
 		Id         string `json:"id"`
 		Amount     string `json:"amount"`
 		Currency   string `json:"currency"`
@@ -22,5 +23,5 @@ type CheckoutData struct {
 			SellerId string `json:"sellerId"`
 		} `json:"sellerInfo"`
 		IdempotencyKey string `json:"idempotencyKey"`
-	} `json:"payments"`
+	} `json:"payment"`
 }

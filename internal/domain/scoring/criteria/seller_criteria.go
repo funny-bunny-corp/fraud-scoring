@@ -7,7 +7,7 @@ type SellerCriteria struct {
 }
 
 func (s *SellerCriteria) Execute(input scoring.TransactionRiskScoreInput, factors *scoring.TransactionRiskFactors) {
-	if input.Order.SellerId == input.Last.SellerId {
+	if input.Transaction.Participants.Seller.SellerId == input.Last.SellerId {
 		factors.WithSellerScore(scoring.SellerRiskScoreEvaluation{Scoring: -1})
 	} else {
 		factors.WithSellerScore(scoring.SellerRiskScoreEvaluation{Scoring: 0})

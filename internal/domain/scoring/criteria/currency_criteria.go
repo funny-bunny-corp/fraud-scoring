@@ -7,7 +7,7 @@ type CurrencyCriteria struct {
 }
 
 func (c *CurrencyCriteria) Execute(input scoring.TransactionRiskScoreInput, factors *scoring.TransactionRiskFactors) {
-	if input.Order.Currency != input.Last.Currency {
+	if input.Transaction.Payment.Currency != input.Last.Currency {
 		factors.WithCurrencyScore(scoring.CurrencyRiskScoreEvaluation{Scoring: -1})
 	} else {
 		factors.WithCurrencyScore(scoring.CurrencyRiskScoreEvaluation{Scoring: 0})

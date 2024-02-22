@@ -6,7 +6,10 @@ import (
 	"fraud-scoring/internal/domain/application"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
+	"time"
 )
+
+const customDateFormat = "2006-01-02T15:04:05.000000"
 
 type CheckoutEventReceiver struct {
 	scr *application.PaymentRiskScoring
@@ -19,19 +22,39 @@ func (cer *CheckoutEventReceiver) Handle(ctx context.Context, event cloudevents.
 		cer.log.Error("error to retrieve deserialize cloud event data", zap.String("error", err.Error()))
 		return err
 	}
-	for _, po := range data.Payments {
-		order := &domain.PaymentOrder{
-			Id:            po.Id,
-			Amount:        po.Amount,
-			Currency:      po.Currency,
-			SellerId:      po.SellerInfo.SellerId,
-			BuyerDocument: data.Checkout.BuyerInfo.Document,
-		}
-		err := cer.scr.Assessment(order)
-		if err != nil {
-			cer.log.Error("error to make scorecard for transaction", zap.String("id", order.Id))
-			return err
-		}
+	t, err := time.Parse(customDateFormat, data.Checkout.At)
+	if err != nil {
+		cer.log.Error("error to parse date for transaction", zap.String("id", data.Payment.Id))
+		return err
+	}
+
+	analysis := &domain.TransactionAnalysis{
+		Participants: domain.Participants{
+			Buyer: domain.BuyerInfo{
+				Document: data.Checkout.BuyerInfo.Document,
+				Name:     data.Checkout.BuyerInfo.Name,
+			},
+			Seller: domain.SellerInfo{SellerId: data.Payment.SellerInfo.SellerId},
+		},
+		Order: domain.Checkout{
+			Id: data.Checkout.Id,
+			PaymentType: domain.CardInfo{
+				CardInfo: data.Checkout.CardInfo.CardInfo,
+				Token:    data.Checkout.CardInfo.Token,
+			},
+			At: t,
+		},
+		Payment: domain.Payment{
+			Amount:   data.Payment.Amount,
+			Currency: data.Payment.Currency,
+			Status:   data.Payment.Status,
+			Id:       data.Payment.Id,
+		},
+	}
+	err = cer.scr.Assessment(analysis)
+	if err != nil {
+		cer.log.Error("error to make scorecard for transaction", zap.String("id", analysis.Payment.Id))
+		return err
 	}
 	return nil
 }

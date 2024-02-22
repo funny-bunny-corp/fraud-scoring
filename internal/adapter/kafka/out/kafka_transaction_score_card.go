@@ -22,7 +22,7 @@ type KafkaTransactionScoreCard struct {
 	log *zap.Logger
 }
 
-func (ktsc *KafkaTransactionScoreCard) Store(card *domain.TransactionScoreCard) error {
+func (ktsc *KafkaTransactionScoreCard) Store(card *domain.ScoringResult) error {
 	e := cloudevents.NewEvent()
 	e.SetID(uuid.New().String())
 	e.SetType(eventType)

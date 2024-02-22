@@ -7,7 +7,7 @@ type AverageValueCriteria struct {
 }
 
 func (a *AverageValueCriteria) Execute(input scoring.TransactionRiskScoreInput, factors *scoring.TransactionRiskFactors) {
-	if input.Order.Amount >= input.Average.Amount {
+	if input.Transaction.Payment.Amount >= input.Average.Amount {
 		factors.WithAverageValueScore(scoring.AverageValueRiskScoreEvaluation{Scoring: -3})
 	} else {
 		factors.WithAverageValueScore(scoring.AverageValueRiskScoreEvaluation{Scoring: 0})

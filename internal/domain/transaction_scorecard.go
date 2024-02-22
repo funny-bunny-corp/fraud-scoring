@@ -1,7 +1,11 @@
 package domain
 
-type TransactionScoreCard struct {
-	Transaction       Transaction           `json:"transaction"`
+type ScoringResult struct {
+	Score       ScoreCard           `json:"score"`
+	Transaction TransactionAnalysis `json:"transaction"`
+}
+
+type ScoreCard struct {
 	ValueScore        ValueScoreCard        `json:"value_score"`
 	SellerScore       SellerScoreCard       `json:"seller_score"`
 	AverageValueScore AverageValueScoreCard `json:"average_value_score"`
