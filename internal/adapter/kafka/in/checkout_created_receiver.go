@@ -10,6 +10,7 @@ import (
 )
 
 const customDateFormat = "2006-01-02T15:04:05.000000"
+const eventType = "paymentic.io.payment-processing.v1.payment.created"
 
 type CheckoutEventReceiver struct {
 	scr *application.PaymentRiskScoring
@@ -17,44 +18,45 @@ type CheckoutEventReceiver struct {
 }
 
 func (cer *CheckoutEventReceiver) Handle(ctx context.Context, event cloudevents.Event) error {
-	data := &domain.CheckoutData{}
-	if err := event.DataAs(data); err != nil {
-		cer.log.Error("error to retrieve deserialize cloud event data", zap.String("error", err.Error()))
-		return err
-	}
-	t, err := time.Parse(customDateFormat, data.Checkout.At)
-	if err != nil {
-		cer.log.Error("error to parse date for transaction", zap.String("id", data.Payment.Id))
-		return err
-	}
-
-	analysis := &domain.TransactionAnalysis{
-		Participants: domain.Participants{
-			Buyer: domain.BuyerInfo{
-				Document: data.Checkout.BuyerInfo.Document,
-				Name:     data.Checkout.BuyerInfo.Name,
+	if eventType == event.Type() {
+		data := &domain.CheckoutData{}
+		if err := event.DataAs(data); err != nil {
+			cer.log.Error("error to retrieve deserialize cloud event data", zap.String("error", err.Error()))
+			return err
+		}
+		t, err := time.Parse(customDateFormat, data.Checkout.At)
+		if err != nil {
+			cer.log.Error("error to parse date for transaction", zap.String("id", data.Payment.Id))
+			return err
+		}
+		analysis := &domain.TransactionAnalysis{
+			Participants: domain.Participants{
+				Buyer: domain.BuyerInfo{
+					Document: data.Checkout.BuyerInfo.Document,
+					Name:     data.Checkout.BuyerInfo.Name,
+				},
+				Seller: domain.SellerInfo{SellerId: data.Payment.SellerInfo.SellerId},
 			},
-			Seller: domain.SellerInfo{SellerId: data.Payment.SellerInfo.SellerId},
-		},
-		Order: domain.Checkout{
-			Id: data.Checkout.Id,
-			PaymentType: domain.CardInfo{
-				CardInfo: data.Checkout.CardInfo.CardInfo,
-				Token:    data.Checkout.CardInfo.Token,
+			Order: domain.Checkout{
+				Id: data.Checkout.Id,
+				PaymentType: domain.CardInfo{
+					CardInfo: data.Checkout.CardInfo.CardInfo,
+					Token:    data.Checkout.CardInfo.Token,
+				},
+				At: t,
 			},
-			At: t,
-		},
-		Payment: domain.Payment{
-			Amount:   data.Payment.Amount,
-			Currency: data.Payment.Currency,
-			Status:   data.Payment.Status,
-			Id:       data.Payment.Id,
-		},
-	}
-	err = cer.scr.Assessment(analysis)
-	if err != nil {
-		cer.log.Error("error to make scorecard for transaction", zap.String("id", analysis.Payment.Id))
-		return err
+			Payment: domain.Payment{
+				Amount:   data.Payment.Amount,
+				Currency: data.Payment.Currency,
+				Status:   data.Payment.Status,
+				Id:       data.Payment.Id,
+			},
+		}
+		err = cer.scr.Assessment(analysis)
+		if err != nil {
+			cer.log.Error("error to make scorecard for transaction", zap.String("id", analysis.Payment.Id))
+			return err
+		}
 	}
 	return nil
 }

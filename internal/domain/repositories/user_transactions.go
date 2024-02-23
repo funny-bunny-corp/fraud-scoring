@@ -1,8 +1,11 @@
 package repositories
 
-import "fraud-scoring/internal/domain/history"
+import (
+	"fraud-scoring/internal/domain/history"
+	"time"
+)
 
 type UserTransactionsRepository interface {
 	LastOrder(document string) (*history.LastOrder, error)
-	AverageTransactions(document string, month string) (*history.AveragePayment, error)
+	AverageTransactions(document string, at time.Time) (*history.AveragePayment, error)
 }

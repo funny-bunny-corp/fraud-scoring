@@ -4,6 +4,7 @@ import (
 	"context"
 	"fraud-scoring/internal/domain/history"
 	api "fraud-scoring/internal/infra/grpc"
+	"time"
 )
 
 type GrpcUserTransactionsRepository struct {
@@ -23,10 +24,10 @@ func (gutr *GrpcUserTransactionsRepository) LastOrder(document string) (*history
 	}, nil
 }
 
-func (gutr *GrpcUserTransactionsRepository) AverageTransactions(document string, month string) (*history.AveragePayment, error) {
+func (gutr *GrpcUserTransactionsRepository) AverageTransactions(document string, at time.Time) (*history.AveragePayment, error) {
 	arg := &api.UserMonthAverageRequest{
 		Document: document,
-		Month:    month,
+		Month:    at.String(),
 	}
 	res, err := gutr.grpc.GetUserMonthAverage(context.Background(), arg)
 	if err != nil {

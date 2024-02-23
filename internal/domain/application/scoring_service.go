@@ -7,7 +7,6 @@ import (
 	"fraud-scoring/internal/domain/scoring"
 	"fraud-scoring/internal/domain/scoring/criteria"
 	"go.uber.org/zap"
-	"strconv"
 )
 
 type PaymentRiskScoring struct {
@@ -27,8 +26,7 @@ func (prs *PaymentRiskScoring) Assessment(order *domain.TransactionAnalysis) err
 		prs.log.Error("error to retrieve last transaction", zap.String("user_id", order.Participants.Buyer.Document))
 		return errors.LastOrderNotFound{Err: err}
 	}
-	month := int(order.Order.At.Month())
-	avg, err := prs.utr.AverageTransactions(order.Participants.Buyer.Document, strconv.FormatInt(int64(month), 10))
+	avg, err := prs.utr.AverageTransactions(order.Participants.Buyer.Document, order.Order.At)
 	if err != nil {
 		prs.log.Error("error to retrieve avg transaction", zap.String("user_id", order.Participants.Buyer.Document))
 		return errors.AverageTransactionsNotFound{Err: err}
