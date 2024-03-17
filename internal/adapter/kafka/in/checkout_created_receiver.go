@@ -10,7 +10,7 @@ import (
 )
 
 const customDateFormat = "2006-01-02T15:04:05.000000"
-const eventType = "paymentic.io.payment-processing.v1.payment.created"
+const eventType = "funny-bunny.xyz.payment-processing.v1.payment.created"
 
 type CheckoutEventReceiver struct {
 	scr *application.PaymentRiskScoring
