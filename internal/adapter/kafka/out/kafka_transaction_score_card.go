@@ -12,9 +12,13 @@ import (
 )
 
 const (
-	eventType    = "funny-bunny.xyz.fraud-detection.v1.transaction.scorecard.created"
-	eventSource  = "fraud-scoring"
-	eventSubject = "score-card-ready"
+	eventType         = "funny-bunny.xyz.fraud-detection.v1.transaction.scorecard.created"
+	eventSource       = "fraud-scoring"
+	eventSubject      = "score-card-ready"
+	eventContextData  = "domain"
+	eventAudienceData = "external-bounded-context"
+	eventContextName  = "eventcontext"
+	eventAudienceName = "audience"
 )
 
 type KafkaTransactionScoreCard struct {
@@ -28,6 +32,8 @@ func (ktsc *KafkaTransactionScoreCard) Store(card *domain.ScoringResult) error {
 	e.SetType(eventType)
 	e.SetSource(eventSource)
 	e.SetSubject(eventSubject)
+	e.SetExtension(eventAudienceName, eventAudienceData)
+	e.SetExtension(eventContextName, eventContextData)
 	_ = e.SetData(cloudevents.ApplicationJSON, card)
 	if result := ktsc.cli.Send(
 		kafka_sarama.WithMessageKey(context.Background(), sarama.StringEncoder(e.ID())),
