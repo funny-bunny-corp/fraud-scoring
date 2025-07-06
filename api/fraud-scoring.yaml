@@ -3,7 +3,33 @@ info:
   title: Fraud Detection API
   version: '1.0.0'
   description: |
-    This API is responsible for handling real-time fraud detection events within our financial system. Specifically, it provides operations for subscribing to transaction scores which are used to evaluate the potential risk associated with a transaction.
+    This API is responsible for handling real-time fraud detection events within our financial system. 
+    It provides operations for subscribing to transaction scores, publishing fraud alerts, and managing 
+    transaction processing events. The API uses Apache Kafka for event streaming and follows the 
+    CloudEvents specification for standardized event messaging.
+
+    ## Key Features
+    - Real-time fraud detection scoring
+    - Transaction processing events
+    - Fraud alert notifications
+    - User behavior analytics
+    - Historical transaction analysis
+
+    ## Event Flow
+    1. Transaction events are published to the payment processing channel
+    2. Fraud scoring service processes transactions and generates scorecards
+    3. Scorecards are published to the fraud detection channel
+    4. High-risk transactions trigger fraud alerts
+    5. All events are logged for audit and analytics
+
+  contact:
+    name: Fraud Detection Team
+    email: fraud-detection@company.com
+    url: https://company.com/fraud-detection
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://company.com/terms
 
 defaultContentType: application/cloudevents+json; charset=UTF-8
 
@@ -11,35 +37,555 @@ servers:
   production:
     url: kafka.company.org:9092
     protocol: kafka
-    description: Kafka server for production used to handle event messaging for the fraud detection system.
+    description: Kafka server for production used to handle event messaging for the fraud detection system
+    security:
+      - saslScram: []
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema-registry.company.org
+        schemaRegistryVendor: confluent
+  staging:
+    url: kafka-staging.company.org:9092
+    protocol: kafka
+    description: Kafka server for staging environment
+    security:
+      - saslScram: []
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka server for development
 
 channels:
   fraud-detection.transaction-scorecard:
-    description: This channel is dedicated to receiving messages containing transaction scorecard data, which are crucial for our fraud detection processes.
+    description: |
+      This channel is dedicated to receiving messages containing transaction scorecard data, 
+      which are crucial for our fraud detection processes. Scorecards include multiple risk 
+      factors such as value analysis, seller reputation, historical patterns, and currency stability.
+    parameters:
+      partition:
+        description: Kafka partition for load balancing
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 9
     subscribe:
       summary: Subscribe to Transaction ScoreCard Events
       description: |
-        Allows the subscriber to receive real-time scorecard data related to financial transactions. This data includes scores from different perspectives, like value, seller reliability, average value, and currency stability, which collectively aid in the process of fraud detection.
+        Allows the subscriber to receive real-time scorecard data related to financial transactions. 
+        This data includes scores from different perspectives, like value, seller reliability, 
+        average value, and currency stability, which collectively aid in the process of fraud detection.
+        
+        Events are partitioned by user document to ensure ordered processing per user.
       operationId: receiveTransactionScoreCard
+      tags:
+        - name: fraud-detection
+        - name: scoring
+      bindings:
+        kafka:
+          groupId: fraud-detection-processors
+          clientId: fraud-detection-consumer
       message:
         $ref: '#/components/messages/ceTransactionScoreCardCreated'
 
-components:
+  payment-processing.transaction-events:
+    description: |
+      Channel for transaction processing events that trigger fraud detection analysis.
+      This includes new transactions, payment updates, and transaction completions.
+    parameters:
+      partition:
+        description: Kafka partition for load balancing
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 9
+    publish:
+      summary: Publish Transaction Processing Events
+      description: |
+        Publishes transaction events that need to be analyzed for fraud detection.
+        These events trigger the scoring process and generate scorecards.
+      operationId: publishTransactionEvent
+      tags:
+        - name: payment-processing
+        - name: transactions
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: User document identifier for partitioning
+      message:
+        $ref: '#/components/messages/ceTransactionProcessingEvent'
 
+  fraud-detection.alerts:
+    description: |
+      Channel for high-priority fraud alerts that require immediate attention.
+      These alerts are generated when transactions exceed risk thresholds.
+    publish:
+      summary: Publish Fraud Alert Events
+      description: |
+        Publishes fraud alert events for transactions that have been flagged as high-risk.
+        These events are consumed by notification services and security systems.
+      operationId: publishFraudAlert
+      tags:
+        - name: fraud-detection
+        - name: alerts
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Transaction ID for tracking
+      message:
+        $ref: '#/components/messages/ceFraudAlertEvent'
+
+  user-analytics.behavior:
+    description: |
+      Channel for user behavior analytics events that help build user profiles
+      and improve fraud detection accuracy over time.
+    subscribe:
+      summary: Subscribe to User Behavior Analytics
+      description: |
+        Receives user behavior analytics events that provide insights into user
+        transaction patterns, helping to improve fraud detection algorithms.
+      operationId: receiveUserBehaviorAnalytics
+      tags:
+        - name: analytics
+        - name: user-behavior
+      bindings:
+        kafka:
+          groupId: behavior-analytics-processors
+      message:
+        $ref: '#/components/messages/ceUserBehaviorEvent'
+
+components:
   messages:
     ceTransactionScoreCardCreated:
       name: TransactionScoreCardEvent
       title: Transaction ScoreCard Event Message
-      summary: Event message containing a Transaction ScoreCard.
+      summary: Event message containing a Transaction ScoreCard with fraud risk analysis
+      description: |
+        CloudEvent containing detailed fraud scoring information for a transaction.
+        This includes individual component scores and an overall risk assessment.
       contentType: application/json
+      headers:
+        type: object
+        properties:
+          ce-specversion:
+            type: string
+            const: "1.0"
+          ce-type:
+            type: string
+            const: "com.company.fraud-detection.transaction-scorecard.created"
+          ce-source:
+            type: string
+            example: "fraud-scoring-service"
+          ce-id:
+            type: string
+            format: uuid
+          ce-time:
+            type: string
+            format: date-time
+          ce-datacontenttype:
+            type: string
+            const: "application/json"
       payload:
         $ref: '#/components/schemas/transactionScoreCard'
+      correlationId:
+        description: Transaction ID for correlating events
+        location: $message.payload.data.transaction.order.id
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: User document identifier
+
+    ceTransactionProcessingEvent:
+      name: TransactionProcessingEvent
+      title: Transaction Processing Event Message
+      summary: Event message for transaction processing that triggers fraud analysis
+      description: |
+        CloudEvent containing transaction data that needs to be processed for fraud detection.
+        This event triggers the scoring pipeline and generates fraud risk assessments.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          ce-specversion:
+            type: string
+            const: "1.0"
+          ce-type:
+            type: string
+            const: "com.company.payment-processing.transaction.created"
+          ce-source:
+            type: string
+            example: "payment-gateway"
+          ce-id:
+            type: string
+            format: uuid
+          ce-time:
+            type: string
+            format: date-time
+      payload:
+        $ref: '#/components/schemas/transactionProcessingData'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: User document identifier
+
+    ceFraudAlertEvent:
+      name: FraudAlertEvent
+      title: Fraud Alert Event Message
+      summary: High-priority alert for transactions flagged as potential fraud
+      description: |
+        CloudEvent containing fraud alert information for high-risk transactions.
+        These events are sent to notification services and security teams.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          ce-specversion:
+            type: string
+            const: "1.0"
+          ce-type:
+            type: string
+            const: "com.company.fraud-detection.alert.created"
+          ce-source:
+            type: string
+            example: "fraud-scoring-service"
+          ce-id:
+            type: string
+            format: uuid
+          ce-time:
+            type: string
+            format: date-time
+          ce-priority:
+            type: string
+            enum: [high, critical]
+      payload:
+        $ref: '#/components/schemas/fraudAlertData'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Transaction ID
+
+    ceUserBehaviorEvent:
+      name: UserBehaviorEvent
+      title: User Behavior Analytics Event Message
+      summary: Event containing user behavior analytics data
+      description: |
+        CloudEvent containing user behavior analytics information used to improve
+        fraud detection algorithms and build user profiles.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          ce-specversion:
+            type: string
+            const: "1.0"
+          ce-type:
+            type: string
+            const: "com.company.analytics.user-behavior.updated"
+          ce-source:
+            type: string
+            example: "user-analytics-service"
+          ce-id:
+            type: string
+            format: uuid
+          ce-time:
+            type: string
+            format: date-time
+      payload:
+        $ref: '#/components/schemas/userBehaviorData'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: User document identifier
 
   schemas:
     transactionScoreCard:
       type: object
+      description: CloudEvent containing transaction scorecard data
       allOf:
         - $ref: 'https://raw.githubusercontent.com/cloudevents/spec/v1.0.1/spec.json'
       properties:
         data:
-          $ref: 'https://raw.githubusercontent.com/paymentic/schemas/main/fraud-detection/payments-gateway.v1.transaction-scorecard-created.json'
+          type: object
+          description: Fraud scoring result with detailed analysis
+          properties:
+            score:
+              type: object
+              description: Detailed scoring breakdown
+              properties:
+                valueScore:
+                  type: object
+                  properties:
+                    score:
+                      type: integer
+                      minimum: 0
+                      maximum: 100
+                    factors:
+                      type: array
+                      items:
+                        type: string
+                sellerScore:
+                  type: object
+                  properties:
+                    score:
+                      type: integer
+                      minimum: 0
+                      maximum: 100
+                    factors:
+                      type: array
+                      items:
+                        type: string
+                averageValueScore:
+                  type: object
+                  properties:
+                    score:
+                      type: integer
+                      minimum: 0
+                      maximum: 100
+                    factors:
+                      type: array
+                      items:
+                        type: string
+                currencyScore:
+                  type: object
+                  properties:
+                    score:
+                      type: integer
+                      minimum: 0
+                      maximum: 100
+                    factors:
+                      type: array
+                      items:
+                        type: string
+                overallScore:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: Overall fraud risk score
+                riskLevel:
+                  type: string
+                  enum: [low, medium, high, critical]
+                  description: Risk level classification
+            transaction:
+              $ref: '#/components/schemas/transactionData'
+            timestamp:
+              type: string
+              format: date-time
+              description: When the scoring was performed
+          required:
+            - score
+            - transaction
+            - timestamp
+
+    transactionProcessingData:
+      type: object
+      description: CloudEvent containing transaction processing data
+      allOf:
+        - $ref: 'https://raw.githubusercontent.com/cloudevents/spec/v1.0.1/spec.json'
+      properties:
+        data:
+          $ref: '#/components/schemas/transactionData'
+
+    fraudAlertData:
+      type: object
+      description: CloudEvent containing fraud alert data
+      allOf:
+        - $ref: 'https://raw.githubusercontent.com/cloudevents/spec/v1.0.1/spec.json'
+      properties:
+        data:
+          type: object
+          properties:
+            transactionId:
+              type: string
+              description: Unique transaction identifier
+            riskScore:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: Risk score that triggered the alert
+            riskLevel:
+              type: string
+              enum: [high, critical]
+              description: Risk level classification
+            alertType:
+              type: string
+              enum: [velocity, amount, pattern, location, device]
+              description: Type of fraud pattern detected
+            transaction:
+              $ref: '#/components/schemas/transactionData'
+            reasons:
+              type: array
+              items:
+                type: string
+              description: List of reasons why this transaction was flagged
+            recommendedActions:
+              type: array
+              items:
+                type: string
+              description: Recommended actions to take
+            timestamp:
+              type: string
+              format: date-time
+              description: When the alert was generated
+          required:
+            - transactionId
+            - riskScore
+            - riskLevel
+            - alertType
+            - transaction
+            - reasons
+            - timestamp
+
+    userBehaviorData:
+      type: object
+      description: CloudEvent containing user behavior analytics data
+      allOf:
+        - $ref: 'https://raw.githubusercontent.com/cloudevents/spec/v1.0.1/spec.json'
+      properties:
+        data:
+          type: object
+          properties:
+            userDocument:
+              type: string
+              description: User document identifier
+            behaviorProfile:
+              type: object
+              properties:
+                averageTransactionAmount:
+                  type: number
+                  description: Average transaction amount
+                transactionFrequency:
+                  type: integer
+                  description: Average transactions per day
+                preferredMerchants:
+                  type: array
+                  items:
+                    type: string
+                  description: List of frequently used merchants
+                commonTransactionTimes:
+                  type: array
+                  items:
+                    type: string
+                  description: Common transaction hours
+                geographicPattern:
+                  type: object
+                  properties:
+                    commonLocations:
+                      type: array
+                      items:
+                        type: string
+                    suspiciousLocations:
+                      type: array
+                      items:
+                        type: string
+            riskFactors:
+              type: array
+              items:
+                type: string
+              description: Identified risk factors for this user
+            lastUpdated:
+              type: string
+              format: date-time
+              description: When the behavior profile was last updated
+          required:
+            - userDocument
+            - behaviorProfile
+            - lastUpdated
+
+    transactionData:
+      type: object
+      description: Common transaction data structure
+      properties:
+        participants:
+          type: object
+          properties:
+            buyer:
+              type: object
+              properties:
+                document:
+                  type: string
+                  description: Buyer document identifier
+                name:
+                  type: string
+                  description: Buyer name
+            seller:
+              type: object
+              properties:
+                sellerId:
+                  type: string
+                  description: Seller identifier
+        order:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Order identifier
+            paymentType:
+              type: object
+              properties:
+                cardInfo:
+                  type: string
+                  description: Masked card information
+                token:
+                  type: string
+                  description: Payment token
+            at:
+              type: string
+              format: date-time
+              description: Order timestamp
+        payment:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Payment identifier
+            amount:
+              type: string
+              description: Payment amount
+            currency:
+              type: string
+              description: Payment currency
+            status:
+              type: string
+              enum: [pending, completed, failed, cancelled]
+              description: Payment status
+      required:
+        - participants
+        - order
+        - payment
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: SASL/SCRAM authentication for Kafka
+
+  parameters:
+    partition:
+      description: Kafka partition number
+      schema:
+        type: integer
+        minimum: 0
+
+tags:
+  - name: fraud-detection
+    description: Fraud detection related events
+  - name: scoring
+    description: Transaction scoring events
+  - name: payment-processing
+    description: Payment processing events
+  - name: transactions
+    description: Transaction related events
+  - name: alerts
+    description: Fraud alert events
+  - name: analytics
+    description: Analytics and behavior events
+  - name: user-behavior
+    description: User behavior analytics events
+
+externalDocs:
+  description: Find more info about fraud detection
+  url: https://company.com/docs/fraud-detection

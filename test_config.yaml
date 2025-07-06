@@ -1,0 +1,294 @@
+# Test Configuration for Fraud Scoring System
+# This file defines test settings, environments, and test suites
+
+# Test Environment Settings
+environments:
+  unit:
+    description: "Unit test environment with mocked dependencies"
+    database:
+      mock: true
+    kafka:
+      mock: true
+    grpc:
+      mock: true
+    log_level: "error"
+    
+  integration:
+    description: "Integration test environment with real services"
+    database:
+      host: "localhost"
+      port: 5432
+      name: "fraud_scoring_test"
+      user: "test_user"
+      password: "test_password"
+    kafka:
+      brokers: ["localhost:9092"]
+      topics:
+        - "fraud-detection-test"
+        - "payment-processing-test"
+    grpc:
+      host: "localhost"
+      port: 50051
+    log_level: "info"
+    
+  e2e:
+    description: "End-to-end test environment"
+    database:
+      host: "test-db"
+      port: 5432
+      name: "fraud_scoring_e2e"
+      user: "e2e_user"
+      password: "e2e_password"
+    kafka:
+      brokers: ["test-kafka:9092"]
+      topics:
+        - "fraud-detection-e2e"
+        - "payment-processing-e2e"
+    grpc:
+      host: "test-grpc"
+      port: 50051
+    log_level: "debug"
+
+# Test Suites Configuration
+test_suites:
+  unit:
+    description: "Unit tests for individual components"
+    timeout: "5m"
+    parallel: true
+    coverage:
+      enabled: true
+      threshold: 80
+    tests:
+      - "internal/domain/*_test.go"
+      - "internal/domain/application/*_test.go"
+      - "internal/infra/grpc/*_test.go"
+      - "internal/adapter/*_test.go"
+      
+  integration:
+    description: "Integration tests for service interactions"
+    timeout: "10m"
+    parallel: false
+    setup:
+      - "docker-compose up -d test-db test-kafka"
+      - "sleep 10"
+    teardown:
+      - "docker-compose down"
+    tests:
+      - "tests/integration/*_test.go"
+      
+  e2e:
+    description: "End-to-end tests for complete workflows"
+    timeout: "15m"
+    parallel: false
+    setup:
+      - "docker-compose up -d"
+      - "sleep 30"
+    teardown:
+      - "docker-compose down"
+    tests:
+      - "tests/e2e/*_test.go"
+      
+  performance:
+    description: "Performance and load tests"
+    timeout: "30m"
+    parallel: false
+    benchmarks:
+      enabled: true
+      duration: "10s"
+      concurrent_users: 100
+    tests:
+      - "tests/performance/*_test.go"
+
+# Test Data Configuration
+test_data:
+  transactions:
+    valid_samples: 1000
+    invalid_samples: 100
+    currencies: ["USD", "EUR", "BRL", "JPY"]
+    amounts:
+      min: 0.01
+      max: 10000.00
+    users:
+      count: 50
+      documents: 
+        - "12345678901"
+        - "98765432109"
+        - "11111111111"
+  
+  sellers:
+    count: 20
+    ids:
+      - "seller-001"
+      - "seller-002"
+      - "seller-trusted"
+      - "seller-suspicious"
+
+# Coverage Configuration
+coverage:
+  target: 85
+  format: "html"
+  output: "coverage/"
+  exclude:
+    - "*.pb.go"
+    - "*_grpc.pb.go"
+    - "cmd/*"
+    - "vendor/*"
+    - "tests/*"
+
+# Test Tools Configuration
+tools:
+  linter:
+    enabled: true
+    config: ".golangci.yml"
+  race_detector:
+    enabled: true
+  memory_profiler:
+    enabled: false
+  cpu_profiler:
+    enabled: false
+  
+# Continuous Integration Configuration
+ci:
+  pre_commit:
+    hooks:
+      - "make fmt"
+      - "make vet"
+      - "make lint"
+      - "make test"
+  
+  pipeline:
+    stages:
+      - name: "Static Analysis"
+        commands:
+          - "make fmt"
+          - "make vet"
+          - "make lint"
+          - "make security"
+      
+      - name: "Unit Tests"
+        commands:
+          - "make test"
+          - "make test-coverage"
+      
+      - name: "Integration Tests"
+        commands:
+          - "make test-integration"
+          - "make test-race"
+      
+      - name: "Build"
+        commands:
+          - "make build"
+      
+      - name: "E2E Tests"
+        commands:
+          - "make test-e2e"
+      
+      - name: "Performance Tests"
+        commands:
+          - "make bench"
+
+# Test Reporting Configuration
+reporting:
+  formats:
+    - "junit"
+    - "json"
+    - "html"
+  
+  output_dir: "test-reports"
+  
+  notifications:
+    slack:
+      enabled: false
+      webhook: "${SLACK_WEBHOOK_URL}"
+      channel: "#fraud-scoring-alerts"
+    
+    email:
+      enabled: false
+      recipients:
+        - "team@company.com"
+
+# Mock Configuration
+mocks:
+  repositories:
+    user_transactions:
+      enabled: true
+      data_file: "tests/fixtures/user_transactions.json"
+    
+    transaction_scorecards:
+      enabled: true
+      data_file: "tests/fixtures/scorecards.json"
+  
+  external_services:
+    kafka:
+      enabled: true
+      mock_responses: true
+    
+    grpc:
+      enabled: true
+      mock_server: true
+      port: 50052
+
+# Database Test Configuration
+database:
+  migrations:
+    enabled: true
+    path: "migrations/test"
+  
+  fixtures:
+    enabled: true
+    path: "tests/fixtures"
+    files:
+      - "users.sql"
+      - "transactions.sql"
+      - "scorecards.sql"
+  
+  cleanup:
+    enabled: true
+    strategy: "truncate" # or "delete"
+
+# Kafka Test Configuration
+kafka:
+  test_topics:
+    - name: "fraud-detection-test"
+      partitions: 1
+      replication: 1
+    - name: "payment-processing-test"
+      partitions: 1
+      replication: 1
+  
+  consumer_groups:
+    - "fraud-scoring-test-group"
+    - "payment-processing-test-group"
+
+# Load Testing Configuration
+load_testing:
+  scenarios:
+    - name: "Normal Load"
+      duration: "5m"
+      users: 10
+      ramp_up: "30s"
+    
+    - name: "Peak Load"
+      duration: "10m"
+      users: 100
+      ramp_up: "2m"
+    
+    - name: "Stress Test"
+      duration: "15m"
+      users: 500
+      ramp_up: "5m"
+
+# Test Timeouts
+timeouts:
+  unit_test: "30s"
+  integration_test: "2m"
+  e2e_test: "5m"
+  performance_test: "30m"
+
+# Feature Flags for Testing
+feature_flags:
+  enable_grpc_health_check: true
+  enable_kafka_health_check: true
+  enable_database_health_check: true
+  enable_metrics_collection: true
+  enable_distributed_tracing: false
