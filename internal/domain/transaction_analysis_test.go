@@ -1,6 +1,9 @@
 package domain
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -502,12 +505,7 @@ func (ci *CardInfo) IsMasked() bool {
 	return strings.Contains(ci.CardInfo, "*")
 }
 
-// Additional required imports
-import (
-	"fmt"
-	"strconv"
-	"strings"
-)
+// Additional required imports moved to top
 
 // Benchmark tests
 func BenchmarkTransactionAnalysis_IsValid(b *testing.B) {
