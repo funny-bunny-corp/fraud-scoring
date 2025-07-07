@@ -1,0 +1,210 @@
+{
+  "tableName": "fraud_detection_scorecard",
+  "tableType": "REALTIME",
+  "segmentsConfig": {
+    "timeColumnName": "event_timestamp",
+    "timeType": "MILLISECONDS",
+    "retentionTimeUnit": "DAYS",
+    "retentionTimeValue": "90",
+    "segmentPushType": "APPEND",
+    "segmentAssignmentStrategy": "BalanceNumSegmentAssignmentStrategy"
+  },
+  "tenants": {
+    "broker": "DefaultTenant",
+    "server": "DefaultTenant",
+    "tagOverrideConfig": {}
+  },
+  "tableIndexConfig": {
+    "loadMode": "MMAP",
+    "invertedIndexColumns": [
+      "buyer_document",
+      "seller_id",
+      "payment_currency",
+      "payment_status",
+      "risk_level",
+      "cloudevents_source",
+      "cloudevents_type"
+    ],
+    "rangeIndexColumns": [
+      "event_timestamp",
+      "scoring_timestamp", 
+      "transaction_timestamp",
+      "payment_amount",
+      "overall_risk_score",
+      "value_score",
+      "seller_score",
+      "average_value_score",
+      "currency_score"
+    ],
+    "sortedColumn": [
+      "event_timestamp"
+    ],
+    "bloomFilterColumns": [
+      "transaction_id",
+      "payment_id",
+      "order_id",
+      "buyer_document",
+      "seller_id",
+      "cloudevents_id"
+    ],
+    "noDictionaryColumns": [
+      "payment_amount"
+    ],
+    "varLengthDictionaryColumns": [
+      "buyer_name",
+      "payment_token",
+      "card_info_masked"
+    ],
+    "segmentPartitionConfig": {
+      "columnPartitionMap": {
+        "buyer_document": {
+          "functionName": "Murmur",
+          "numPartitions": 10
+        }
+      }
+    }
+  },
+  "metadata": {
+    "customConfigs": {
+      "data.product.domain": "fraud-detection",
+      "data.product.owner": "fraud-detection-team",
+      "data.product.version": "1.0.0",
+      "data.product.description": "Real-time fraud detection scorecard data product for transaction risk analysis"
+    }
+  },
+  "routing": {
+    "instanceSelectorType": "strictReplicaGroup"
+  },
+  "query": {
+    "timeoutMs": 10000
+  },
+  "ingestionConfig": {
+    "batchIngestionConfig": {
+      "segmentIngestionType": "APPEND",
+      "segmentIngestionFrequency": "HOURLY"
+    },
+    "streamIngestionConfig": {
+      "streamConfigMaps": [
+        {
+          "streamType": "kafka",
+          "stream.kafka.consumer.type": "lowlevel",
+          "stream.kafka.topic.name": "fraud-detection.transaction-scorecard",
+          "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
+          "stream.kafka.consumer.factory.class.name": "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory",
+          "stream.kafka.broker.list": "kafka.company.org:9092",
+          "stream.kafka.consumer.prop.auto.offset.reset": "largest",
+          "stream.kafka.consumer.prop.group.id": "fraud-detection-pinot-consumer",
+          "stream.kafka.consumer.prop.client.id": "fraud-detection-pinot-client",
+          "stream.kafka.consumer.prop.enable.auto.commit": "false",
+          "stream.kafka.consumer.prop.max.poll.records": "1000",
+          "stream.kafka.consumer.prop.fetch.min.bytes": "1024",
+          "stream.kafka.consumer.prop.fetch.max.wait.ms": "1000",
+          "stream.kafka.consumer.prop.session.timeout.ms": "30000",
+          "stream.kafka.consumer.prop.heartbeat.interval.ms": "10000",
+          "stream.kafka.consumer.prop.max.partition.fetch.bytes": "1048576",
+          "realtime.segment.flush.threshold.rows": "1000000",
+          "realtime.segment.flush.threshold.time": "3600000",
+          "realtime.segment.flush.autotune.initial.rows": "100000"
+        }
+      ]
+    },
+    "transformConfigs": [
+      {
+        "columnName": "transaction_id",
+        "transformFunction": "jsonPathString(data, '$.transaction.order.id')"
+      },
+      {
+        "columnName": "payment_id",
+        "transformFunction": "jsonPathString(data, '$.transaction.payment.id')"
+      },
+      {
+        "columnName": "order_id",
+        "transformFunction": "jsonPathString(data, '$.transaction.order.id')"
+      },
+      {
+        "columnName": "buyer_document",
+        "transformFunction": "jsonPathString(data, '$.transaction.participants.buyer.document')"
+      },
+      {
+        "columnName": "buyer_name",
+        "transformFunction": "jsonPathString(data, '$.transaction.participants.buyer.name')"
+      },
+      {
+        "columnName": "seller_id",
+        "transformFunction": "jsonPathString(data, '$.transaction.participants.seller.sellerId')"
+      },
+      {
+        "columnName": "payment_currency",
+        "transformFunction": "jsonPathString(data, '$.transaction.payment.currency')"
+      },
+      {
+        "columnName": "payment_status",
+        "transformFunction": "jsonPathString(data, '$.transaction.payment.status')"
+      },
+      {
+        "columnName": "payment_token",
+        "transformFunction": "jsonPathString(data, '$.transaction.order.paymentType.token')"
+      },
+      {
+        "columnName": "card_info_masked",
+        "transformFunction": "jsonPathString(data, '$.transaction.order.paymentType.cardInfo')"
+      },
+      {
+        "columnName": "risk_level",
+        "transformFunction": "jsonPathString(data, '$.score.riskLevel')"
+      },
+      {
+        "columnName": "cloudevents_id",
+        "transformFunction": "jsonPathString($, '$.id')"
+      },
+      {
+        "columnName": "cloudevents_source",
+        "transformFunction": "jsonPathString($, '$.source')"
+      },
+      {
+        "columnName": "cloudevents_type",
+        "transformFunction": "jsonPathString($, '$.type')"
+      },
+      {
+        "columnName": "cloudevents_specversion",
+        "transformFunction": "jsonPathString($, '$.specversion')"
+      },
+      {
+        "columnName": "payment_amount",
+        "transformFunction": "jsonPathString(data, '$.transaction.payment.amount')"
+      },
+      {
+        "columnName": "overall_risk_score",
+        "transformFunction": "jsonPathLong(data, '$.score.overallScore')"
+      },
+      {
+        "columnName": "value_score",
+        "transformFunction": "jsonPathLong(data, '$.score.valueScore.score')"
+      },
+      {
+        "columnName": "seller_score",
+        "transformFunction": "jsonPathLong(data, '$.score.sellerScore.score')"
+      },
+      {
+        "columnName": "average_value_score",
+        "transformFunction": "jsonPathLong(data, '$.score.averageValueScore.score')"
+      },
+      {
+        "columnName": "currency_score",
+        "transformFunction": "jsonPathLong(data, '$.score.currencyScore.score')"
+      },
+      {
+        "columnName": "event_timestamp",
+        "transformFunction": "toEpochMillis(jsonPathString($, '$.time'))"
+      },
+      {
+        "columnName": "scoring_timestamp",
+        "transformFunction": "toEpochMillis(jsonPathString(data, '$.timestamp'))"
+      },
+      {
+        "columnName": "transaction_timestamp",
+        "transformFunction": "toEpochMillis(jsonPathString(data, '$.transaction.order.at'))"
+      }
+    ]
+  }
+}
