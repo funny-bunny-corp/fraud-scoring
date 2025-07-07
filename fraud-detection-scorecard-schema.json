@@ -1,0 +1,139 @@
+{
+  "schemaName": "fraud_detection_scorecard",
+  "dimensionFieldSpecs": [
+    {
+      "name": "transaction_id",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "payment_id", 
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "order_id",
+      "dataType": "STRING", 
+      "notNull": true
+    },
+    {
+      "name": "buyer_document",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "buyer_name",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "seller_id",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "payment_currency",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "payment_status",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "payment_token",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "card_info_masked",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "risk_level",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "cloudevents_id",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "cloudevents_source",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "cloudevents_type",
+      "dataType": "STRING",
+      "notNull": true
+    },
+    {
+      "name": "cloudevents_specversion",
+      "dataType": "STRING",
+      "notNull": true
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "payment_amount",
+      "dataType": "BIG_DECIMAL",
+      "notNull": true
+    },
+    {
+      "name": "overall_risk_score",
+      "dataType": "INT",
+      "notNull": true
+    },
+    {
+      "name": "value_score",
+      "dataType": "INT",
+      "notNull": true
+    },
+    {
+      "name": "seller_score",
+      "dataType": "INT",
+      "notNull": true
+    },
+    {
+      "name": "average_value_score",
+      "dataType": "INT",
+      "notNull": true
+    },
+    {
+      "name": "currency_score",
+      "dataType": "INT",
+      "notNull": true
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "event_timestamp",
+      "dataType": "TIMESTAMP",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS",
+      "notNull": true
+    },
+    {
+      "name": "scoring_timestamp",
+      "dataType": "TIMESTAMP", 
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS",
+      "notNull": true
+    },
+    {
+      "name": "transaction_timestamp",
+      "dataType": "TIMESTAMP",
+      "format": "1:MILLISECONDS:EPOCH", 
+      "granularity": "1:MILLISECONDS",
+      "notNull": true
+    }
+  ],
+  "primaryKeyColumns": [
+    "transaction_id",
+    "cloudevents_id"
+  ]
+}
